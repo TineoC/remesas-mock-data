@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Archivo {
+  Id                  Int       @id(map: "PK_Archivo") @default(autoincrement())
+  RemesadorId         Int
+  SubsidioId          Int
+  TransactionDebitoId Int
+  UUID                String    @unique(map: "IX_Archivo_UUID") @db.VarChar(255)
+  Nombre              String    @db.VarChar(150)
+  UploadDate          DateTime  @db.Timestamptz(6)
+  MontoTotal          Decimal   @db.Decimal(19, 2)
+  TotalRegistros      Int
+  Moneda              String
+  Concepto            String
+  CreatedBy           String    @db.VarChar(50)
+  UpdatedBy           String    @db.VarChar(50)
+  CreatedDate         DateTime  @db.Timestamptz(6)
+  FechaCarga          DateTime  @db.Timestamptz(6)
+  Remesador           Remesador @relation(fields: [RemesadorId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Archivo_Remesador")
+  Subsidio            Subsidio  @relation(fields: [SubsidioId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Archivo_Subsidio")
+  Remesa              Remesa[]
+
+  @@index([RemesadorId], map: "IX_Archivo_RemesadorId")
+  @@index([SubsidioId], map: "IX_Archivo_SubsidioId")
+}
+
+model Beneficiario {
+  Id                   Int                    @id(map: "PK_Beneficiario") @default(autoincrement())
+  NombreCompleto       String                 @db.VarChar(150)
+  Cedula               String                 @unique(map: "IX_Beneficiario_Cedula") @db.VarChar(11)
+  CreatedBy            String                 @db.VarChar(50)
+  UpdatedBy            String                 @db.VarChar(50)
+  CreatedDate          DateTime               @default(now()) @db.Timestamptz(6)
+  UpdatedDate          DateTime               @default(now()) @db.Timestamptz(6)
+  ContactoBeneficiario ContactoBeneficiario[]
+  Remesa               Remesa[]
+}
+
+model CanalPago {
+  Id          Int          @id(map: "PK_CanalPago") @default(autoincrement())
+  Nombre      String       @db.VarChar(150)
+  CreatedBy   String       @db.VarChar(50)
+  UpdatedBy   String       @db.VarChar(50)
+  CreatedDate DateTime     @default(now()) @db.Timestamptz(6)
+  UpdatedDate DateTime     @default(now()) @db.Timestamptz(6)
+  PagoRemesa  PagoRemesa[]
+}
+
+model ContactoBeneficiario {
+  Id             Int          @id(map: "PK_ContactoBeneficiario") @default(autoincrement())
+  BeneficiarioId Int
+  TipoContactoId Int
+  Contacto       String       @db.VarChar(50)
+  CreatedBy      String       @db.VarChar(50)
+  UpdatedBy      String       @db.VarChar(50)
+  CreatedDate    DateTime     @default(now()) @db.Timestamptz(6)
+  UpdatedDate    DateTime     @default(now()) @db.Timestamptz(6)
+  Beneficiario   Beneficiario @relation(fields: [BeneficiarioId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_ContactoBeneficiario_Beneficiario")
+  TipoContacto   TipoContacto @relation(fields: [TipoContactoId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_ContactoBeneficiario_TipoContacto")
+  Remesa         Remesa[]
+
+  @@index([BeneficiarioId], map: "IX_ContactoBeneficiario_BeneficiarioId")
+  @@index([TipoContactoId], map: "IX_ContactoBeneficiario_TipoContactoId")
+}
+
+model EstatusRemesa {
+  Id          Int      @id(map: "PK_EstatusRemesa") @default(autoincrement())
+  Nombre      String   @db.VarChar(50)
+  CreatedBy   String   @db.VarChar(50)
+  UpdatedBy   String   @db.VarChar(50)
+  CreatedDate DateTime @default(now()) @db.Timestamptz(6)
+  UpdatedDate DateTime @default(now()) @db.Timestamptz(6)
+  Remesa      Remesa[]
+}
+
+model LogConsultaRemesa {
+  Id      Int      @id(map: "PK_LogConsultaRemesa") @default(autoincrement())
+  Usuario String   @db.VarChar(150)
+  Cedula  String   @db.VarChar(150)
+  Fecha   DateTime @db.Timestamptz(6)
+}
+
+model PagoRemesa {
+  Id                   Int       @id(map: "PK_PagoRemesa") @default(autoincrement())
+  RemesaId             Int       @unique(map: "IX_PagoRemesa_RemesaId")
+  CanalPagoId          Int
+  TransaccionCreditoId String    @db.VarChar(150)
+  CajeroId             String    @db.VarChar(150)
+  SucursalId           String    @db.VarChar(150)
+  FechaPago            DateTime  @db.Timestamptz(6)
+  CreatedBy            String    @db.VarChar(50)
+  UpdatedBy            String    @db.VarChar(50)
+  CreatedDate          DateTime  @default(now()) @db.Timestamptz(6)
+  UpdatedDate          DateTime  @default(now()) @db.Timestamptz(6)
+  CanalPago            CanalPago @relation(fields: [CanalPagoId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PagoRemesa_CanalPago")
+  Remesa               Remesa    @relation(fields: [RemesaId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_PagoRemesa_Remesa")
+
+  @@index([CanalPagoId], map: "IX_PagoRemesa_CanalPagoId")
+}
+
+model Remesa {
+  Id                     Int                  @id(map: "PK_Remesa") @default(autoincrement())
+  BeneficiarioId         Int
+  ContactoNotificacionId Int
+  ArchivoId              Int
+  EstatusRemesaId        Int
+  TranckingEnvio         String?              @db.VarChar(50)
+  Hash                   String               @db.VarChar(300)
+  Salt                   String               @db.VarChar(20)
+  Codigo                 String               @unique(map: "IX_Remesa_Codigo") @db.VarChar(100)
+  FechaGeneracion        DateTime             @db.Timestamptz(6)
+  Monto                  Decimal              @db.Decimal(19, 2)
+  Moneda                 String
+  CreatedBy              String               @db.VarChar(50)
+  UpdatedBy              String               @db.VarChar(50)
+  CreatedDate            DateTime             @default(now()) @db.Timestamptz(6)
+  UpdatedDate            DateTime             @default(now()) @db.Timestamptz(6)
+  DebitoTrackId          String?              @db.VarChar(50)
+  Pin                    String?              @db.VarChar(10)
+  PagoRemesa             PagoRemesa?
+  Archivo                Archivo              @relation(fields: [ArchivoId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Remesa_Archivo")
+  Beneficiario           Beneficiario         @relation(fields: [BeneficiarioId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Remesa_Beneficiario")
+  ContactoBeneficiario   ContactoBeneficiario @relation(fields: [ContactoNotificacionId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Remesa_Contacto_Beneficiario")
+  EstatusRemesa          EstatusRemesa        @relation(fields: [EstatusRemesaId], references: [Id], onDelete: Cascade, onUpdate: NoAction, map: "FK_Remesa_Estatus")
+
+  @@index([ArchivoId], map: "IX_Remesa_ArchivoId")
+  @@index([BeneficiarioId], map: "IX_Remesa_BeneficiarioId")
+  @@index([ContactoNotificacionId], map: "IX_Remesa_ContactoNotificacionId")
+  @@index([EstatusRemesaId], map: "IX_Remesa_EstatusRemesaId")
+}
+
+model Remesador {
+  Id           Int        @id(map: "PK_Remesador") @default(autoincrement())
+  Codigo       String     @db.VarChar(50)
+  Nombre       String     @db.VarChar(150)
+  CuentaDebito String     @db.VarChar(100)
+  CreatedBy    String     @db.VarChar(50)
+  UpdatedBy    String     @db.VarChar(50)
+  CreatedDate  DateTime   @default(now()) @db.Timestamptz(6)
+  UpdatedDate  DateTime   @default(now()) @db.Timestamptz(6)
+  Activo       Boolean    @default(false)
+  Archivo      Archivo[]
+  Subsidio     Subsidio[]
+}
+
+model Subsidio {
+  Id            Int       @id(map: "PK_Subsidio") @default(autoincrement())
+  Nombre        String    @db.VarChar(150)
+  Version       String    @db.VarChar(100)
+  HorasVigencia Int
+  CreatedBy     String    @db.VarChar(50)
+  UpdatedBy     String    @db.VarChar(50)
+  CreatedDate   DateTime  @default(now()) @db.Timestamptz(6)
+  UpdatedDate   DateTime  @default(now()) @db.Timestamptz(6)
+  RemesadorId   Int       @default(0)
+  Mensaje       String    @default("") @db.VarChar(255)
+  Codigo        String    @default("") @db.VarChar(50)
+  Activo        Boolean   @default(false)
+  Archivo       Archivo[]
+  Remesador     Remesador @relation(fields: [RemesadorId], references: [Id], onDelete: NoAction, onUpdate: NoAction, map: "FK_Subsidy_Sender")
+
+  @@index([RemesadorId], map: "IX_Subsidio_RemesadorId")
+}
+
+model TipoContacto {
+  Id                   Int                    @id(map: "PK_TipoContacto") @default(autoincrement())
+  Nombre               String                 @db.VarChar(150)
+  CreatedBy            String                 @db.VarChar(50)
+  UpdatedBy            String                 @db.VarChar(50)
+  CreatedDate          DateTime               @default(now()) @db.Timestamptz(6)
+  UpdatedDate          DateTime               @default(now()) @db.Timestamptz(6)
+  ContactoBeneficiario ContactoBeneficiario[]
+}
+
+model EFMigrationsHistory {
+  MigrationId    String @id(map: "PK___EFMigrationsHistory") @db.VarChar(150)
+  ProductVersion String @db.VarChar(32)
+
+  @@map("__EFMigrationsHistory")
+}
